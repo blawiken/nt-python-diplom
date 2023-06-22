@@ -6,6 +6,20 @@ from django.contrib.auth.models import AbstractUser
 from django_rest_passwordreset.tokens import get_token_generator
 
 
+__all__ = [
+    'User',
+    'Contact',
+    'ConfirmEmailToken',
+    'Shop',
+    'Category',
+    'Product',
+    'ProductInfo',
+    'Parameter',
+    'ProductParameter',
+    'Order',
+    'OrderItem',
+]
+
 USER_TYPE_CHOICES = (
     ('shop', 'Магазин'),
     ('buyer', 'Покупатель'),
