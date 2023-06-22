@@ -22,6 +22,8 @@ __all__ = [
     'LoginAccount',
     'AccountDetails',
     'ContactView',
+    'CategoryView',
+    'ShopView',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -154,3 +156,15 @@ class ContactView(APIView):
                         return Response(serializer.data)
                     return Response({'Error': serializer.errors})
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+
+
+class CategoryView(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    ordering = ('name',)
+
+
+class ShopView(ModelViewSet):
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
+    ordering = ('name',)
