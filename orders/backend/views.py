@@ -6,6 +6,10 @@ from rest_framework.response import Response
 from .models import *
 from .serializers import *
 
+__all__ = [
+    'RegisterAccount',
+]
+
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
 
@@ -25,7 +29,7 @@ class RegisterAccount(APIView):
                 user = user_serializer.save()
                 user.set_password(request.data['password'])
                 user.save()
-                return Response(user.data)
+                return Response(user_serializer.data)
             
             else:
                 return Response({'Error': user_serializer.errors})

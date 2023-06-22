@@ -94,7 +94,8 @@ class User(AbstractUser):
 class Contact(models.Model):
     user = models.ForeignKey(User, verbose_name='Пользователь',
                              related_name='contacts',
-                             blank=True)
+                             blank=True,
+                             on_delete=models.CASCADE)
     city = models.EmailField(verbose_name='Город',
                               max_length=50)
     street = models.CharField(verbose_name='Улица',
@@ -155,7 +156,8 @@ class Shop(models.Model):
                                  blank=True, null=True,
                                  storage=FileSystemStorage(settings.STORAGE))
     user = models.OneToOneField(User, verbose_name='Владелец',
-                                blank=True, null=True)
+                                blank=True, null=True,
+                                on_delete=models.CASCADE)
     state = models.BooleanField(verbose_name='Статус',
                                 default=True)
     
