@@ -8,6 +8,7 @@ from .serializers import *
 
 __all__ = [
     'RegisterAccount',
+    'ConfirmAccount',
 ]
 
 
@@ -33,3 +34,19 @@ class RegisterAccount(APIView):
             
             else:
                 return Response({'Error': user_serializer.errors})
+
+
+class ConfirmAccount(APIView):
+    def post(self, request):
+        if not {'email', 'token'}.issubset(request.data):
+            return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+        
+        token = ConfirmEmailToken.objects.filter(user__email=request.data['email'],
+                                                 key=request.data['token']).first()
+        if token:
+            token.user.is_active = True
+            token.user.save()
+            token.delete()
+            return Response({'OK': True})
+        else:
+            return Response({'Error': 'Invalid email or token'})
