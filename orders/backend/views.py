@@ -1,5 +1,7 @@
+from django.db.models import Q, Sum, F
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+
 
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -19,6 +21,7 @@ __all__ = [
     'ConfirmAccount',
     'LoginAccount',
     'AccountDetails',
+    'ContactView',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -100,3 +103,54 @@ class AccountDetails(APIView):
         return Response({'Error': user_serializer.errors})
 
 
+class ContactView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = ContactSerializer(request.user.contacts.all(), many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if not {'city', 'phone'}.issubset(request.data):
+            return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+        
+        mutable = request.POST._mutable
+        request.POST._mutable = True
+        request.POST._mutable = mutable
+        request.data.update({'user': request.user.id})
+        serializer = ContactSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response({'Error': serializer.errors})
+    
+    def delete(self, request):
+        items_sting = request.data.get('items')
+        if items_sting:
+            items_list = items_sting.split(',')
+            query = Q()
+            objects_deleted = False
+            for contact_id in items_list:
+                if contact_id.isdigit():
+                    query = query | Q(user_id=request.user.id, id=contact_id)
+                    objects_deleted = True
+
+            if objects_deleted:
+                deleted_count = Contact.objects.filter(query).delete()[0]
+                return Response({'Deleted count': deleted_count})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+
+    def put(self, request):
+        if 'id' in request.data:
+            if request.data['id'].isdigit():
+                contact = Contact.objects.filter(id=request.data['id'],
+                                                 user_id=request.user.id).first()
+                if contact:
+                    serializer = ContactSerializer(contact,
+                                                   data=request.data,
+                                                   partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response(serializer.data)
+                    return Response({'Error': serializer.errors})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})

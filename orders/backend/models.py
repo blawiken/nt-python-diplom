@@ -96,7 +96,7 @@ class Contact(models.Model):
                              related_name='contacts',
                              blank=True,
                              on_delete=models.CASCADE)
-    city = models.EmailField(verbose_name='Город',
+    city = models.CharField(verbose_name='Город',
                               max_length=50)
     street = models.CharField(verbose_name='Улица',
                                max_length=50,
