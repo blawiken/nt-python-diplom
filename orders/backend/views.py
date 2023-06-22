@@ -2,8 +2,12 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+
+
 
 from .models import *
 from .serializers import *
@@ -14,6 +18,7 @@ __all__ = [
     'RegisterAccount',
     'ConfirmAccount',
     'LoginAccount',
+    'AccountDetails',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -69,3 +74,29 @@ class LoginAccount(APIView):
                 token, _ = Token.objects.get_or_create(user=user)
                 return Response({'OK': token.key})
         return Response({'Error': 'Invalid request'})
+    
+
+class AccountDetails(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        if 'password' in request.data:
+            try:
+                validate_password(request.data['password'])
+            except Exception as error:
+                return Response({'Error': error})
+            else:
+                request.user.set_password(request.data['password'])
+        
+        user_serializer = UserSerializer(request.user, data=request.data,
+                                         partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return Response(user_serializer.data)
+        return Response({'Error': user_serializer.errors})
+
+
