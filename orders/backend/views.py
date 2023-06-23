@@ -4,7 +4,6 @@ from django.db.models.query import Prefetch
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
-
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
@@ -13,11 +12,11 @@ from rest_framework.authtoken.models import Token
 
 from distutils.util import strtobool
 from yaml import safe_load
-from ujson import loads, dumps
+from ujson import loads
 
 from .models import *
 from .serializers import *
-from .signals import *
+from .tasks import *
 
 
 __all__ = [
@@ -79,7 +78,7 @@ class RegisterAccount(APIView):
                 user = user_serializer.save()
                 user.set_password(request.data['password'])
                 user.save()
-                new_user_registered_signal(user.id)
+                new_user_registered(user.id)
                 return Response(user_serializer.data)
             
             else:
