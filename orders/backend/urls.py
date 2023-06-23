@@ -16,11 +16,12 @@ urlpatterns = [
     path('user/register/confirm/', ConfirmAccount.as_view(), name='user-register-confirm'),
     path('user/login/', LoginAccount.as_view(), name='user-login'),
     path('user/details/', AccountDetails.as_view(), name='user-details'),
-    path('user/contact/', ContactView.as_view(), name='user-contact'),
-
+    path('user/contact/', Contact.as_view(), name='user-contact'),
     path('user/password_reset/', reset_password_request_token, name='password-reset'),
     path('user/password_reset/confirm', reset_password_confirm, name='password-reset-confirm'),
     
+    path('basket/', Basket.as_view(), name='basket'),
+
     path('shop/state/', PartnerState.as_view(), name='shop-state'),
 
     path('', include(router.urls)),

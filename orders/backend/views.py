@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.db.models import Q, Sum, F
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -10,6 +11,7 @@ from rest_framework.authtoken.models import Token
 
 from distutils.util import strtobool
 from yaml import safe_load
+from ujson import loads
 
 from .models import *
 from .serializers import *
@@ -21,12 +23,14 @@ __all__ = [
     'ConfirmAccount',
     'LoginAccount',
     'AccountDetails',
-    'ContactView',
+    'Contact',
     'CategoryView',
     'ShopView',
     'PartnerUpdateView',
     'PartnerState',
     'ProductInfoView',
+    'Basket',
+
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -108,7 +112,7 @@ class AccountDetails(APIView):
         return Response({'Error': user_serializer.errors})
 
 
-class ContactView(APIView):
+class Contact(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -267,3 +271,79 @@ class ProductInfoView(ReadOnlyModelViewSet):
         
         return queryset
     
+
+class Basket(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        basket = Order.objects.filter(
+            user_id=request.user.id, status='basket').prefetch_related(
+            'ordered_items__product_info__product__category',
+            'ordered_items__product_info__product_parameters__parameter').annotate(
+            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+        
+        serializer = OrderSerializer(basket, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        items_sting = request.data.get('items')
+        if items_sting:
+            try:
+                items_dict = loads(items_sting)
+            except:
+                return Response({'Error': 'Invalid format request'})
+            else:
+                basket, _ = Order.objects.get_or_create(user_id=request.user.id,
+                                                        state='basket')
+                objects_created = 0
+
+                for order_item in items_dict:
+                    order_item.update({'order': basket.id})
+                    serializer = OrderItemCreateSerializer(data=order_item)
+                    
+                    if serializer.is_valid():
+                        try:
+                            serializer.save()
+                        except IntegrityError as error:
+                            return Response({'Error': str(error)})
+                        else:
+                            objects_created += 1
+                    return Response({'Error': serializer.errors})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+
+    def delete(self, request):
+        items_sting = request.data.get('items')
+        if items_sting:
+            items_list = items_sting.split(',')
+            basket, _ = Order.objects.get_or_create(user_id=request.user.id,
+                                                    status='basket')
+            query = Q()
+            objects_deleted = False
+
+            for order_item_id in items_list:
+                if order_item_id.isdigit():
+                    query = query | Q(order_id=basket.id, id=order_item_id)
+                    objects_deleted = True
+            
+            if objects_deleted:
+                deleted_count = OrderItem.objects.filter(query).delete()[0]
+                return Response({'Deleted count': deleted_count})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+    
+    def put(self, request):
+        items_sting = request.data.get('items')
+        if items_sting:
+            try:
+                items_dict = loads(items_sting)
+            except:
+                return Response({'Error': 'Invalid format request'})
+            else:
+                basket, _ = Order.objects.get_or_create(user_id=request.user.id,
+                                                        status='basket')
+                object_updated = 0
+                for order_item in items_dict:
+                    if type(order_item['id']) == int and type(order_item['quantity']) == int:
+                        object_updated += OrderItem.objects.filter(
+                            order_id=basket.id, id=order_item['id']).update(quantity=order_item['quantity'])
+                return Response({'Objects updated:': object_updated})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
