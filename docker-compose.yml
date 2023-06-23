@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    command: bash -c "
+      python orders/manage.py makemigrations
+      && python orders/manage.py migrate
+      && python orders/manage.py runserver 0.0.0.0:8000"
+    ports:
+    - 8000:8000
