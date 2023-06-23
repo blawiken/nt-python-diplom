@@ -19,6 +19,8 @@ urlpatterns = [
 
     path('user/password_reset/', reset_password_request_token, name='password-reset'),
     path('user/password_reset/confirm', reset_password_confirm, name='password-reset-confirm'),
+    
+    path('shop/state/', PartnerState.as_view(), name='shop-state'),
 
     path('', include(router.urls)),
 ] + router.urls

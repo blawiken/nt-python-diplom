@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
+from distutils.util import strtobool
 from yaml import safe_load
 
 from .models import *
@@ -24,6 +25,7 @@ __all__ = [
     'CategoryView',
     'ShopView',
     'PartnerUpdate',
+    'PartnerState',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -216,4 +218,29 @@ class PartnerUpdate(ModelViewSet):
                                                         value=value)
             return Response(data)
         return Response({'Error': 'Invalid file'})
+
+
+class PartnerState(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.type != 'shop':
+            return Response({'Error': 'Only for shops'})
         
+        return Response(ShopSerializer(request.user.shop).data)
+    
+    def post(self, request):
+        if request.user.type != 'shop':
+            return Response({'Error': 'Only for shops'})
+        
+        state = request.data.get('state')
+        if state:
+            try:
+                Shop.objects.filter(
+                    user_id=request.user.id
+                ).update(state=strtobool(state))
+                return Response(ShopSerializer(request.user.shop).data)
+            
+            except ValueError as error:
+                return Response({'Error': str(error)})
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
