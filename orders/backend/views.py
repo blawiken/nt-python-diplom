@@ -1,7 +1,9 @@
 from django.db import IntegrityError
 from django.db.models import Q, Sum, F
+from django.db.models.query import Prefetch
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+
 
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -28,10 +30,10 @@ __all__ = [
     'ShopView',
     'PartnerUpdateView',
     'PartnerState',
+    'PartnerOrders',
     'ProductInfoView',
     'Basket',
     'Orders',
-
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -250,6 +252,24 @@ class PartnerState(APIView):
             except ValueError as error:
                 return Response({'Error': str(error)})
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+    
+
+class PartnerOrders(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.type != 'shop':
+            return Response({'Error': 'Only for shops'})
+        
+        qureyset = OrderItem.objects.filter(product_info__shop__user_id=request.user.id)
+        pr = Prefetch('ordered_items', qureyset)
+        order = Order.objects.filter(user_id=request.user.id).exclude(status='basket').prefetch_related(
+            pr).select_related('contact').annotate(
+            total_sum=Sum('ordered_items__total_amount'),
+            total_quantity=Sum('ordered_items__quantity'))
+        
+        serializer = OrderSerializer(order, many=True)
+        return Response(serializer.data)
 
 
 class ProductInfoView(ReadOnlyModelViewSet):
@@ -381,4 +401,3 @@ class Orders(APIView):
                     return Response({'OK': True})
 
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
-    

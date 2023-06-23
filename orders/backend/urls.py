@@ -19,11 +19,12 @@ urlpatterns = [
     path('user/contact/', Contact.as_view(), name='user-contact'),
     path('user/password_reset/', reset_password_request_token, name='password-reset'),
     path('user/password_reset/confirm', reset_password_confirm, name='password-reset-confirm'),
-    
+
     path('basket/', Basket.as_view(), name='basket'),
     path('orders/', Orders.as_view(), name='orders'),
 
     path('shop/state/', PartnerState.as_view(), name='shop-state'),
+    path('shop/orders/', PartnerOrders.as_view(), name='shop-orders'),
 
     path('', include(router.urls)),
 ] + router.urls
