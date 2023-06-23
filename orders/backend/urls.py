@@ -6,9 +6,10 @@ from .views import *
 
 
 router = routers.SimpleRouter()
-router.register(r'shops', ShopView)
-router.register(r'categories', CategoryView)
-router.register(r'shop/update', PartnerUpdate)
+router.register(r'categories', CategoryView, basename='categories')
+router.register(r'products', ProductInfoView, basename='products')
+router.register(r'shops', ShopView, basename='shops')
+router.register(r'shop/update', PartnerUpdateView, basename='shop-update')
 
 urlpatterns = [
     path('user/register/', RegisterAccount.as_view(), name='user-register'),

@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
@@ -24,8 +24,9 @@ __all__ = [
     'ContactView',
     'CategoryView',
     'ShopView',
-    'PartnerUpdate',
+    'PartnerUpdateView',
     'PartnerState',
+    'ProductInfoView',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -174,7 +175,7 @@ class ShopView(ModelViewSet):
     http_method_names = ('get',)
 
 
-class PartnerUpdate(ModelViewSet):
+class PartnerUpdateView(ModelViewSet):
     queryset = Shop.objects.none()
     serializer_class = ShopSerializer
     permission_classes = [IsAuthenticated]
@@ -244,3 +245,25 @@ class PartnerState(APIView):
             except ValueError as error:
                 return Response({'Error': str(error)})
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+
+
+class ProductInfoView(ReadOnlyModelViewSet):
+    serializer_class = ProductInfoSerializer
+
+    def get_queryset(self):
+        query = Q(shop__state=True)
+        shop_id = self.request.query_params.get('shop_id')
+        category_id = self.request.query_params.get('category_id')
+
+        if shop_id:
+            query = query & Q(shop_id=shop_id)
+        if category_id:
+            query = query & Q(product__category_id=category_id)
+        
+        queryset = ProductInfo.objects.filter(
+            query).select_related(
+            'shop', 'product__category').prefetch_related(
+            'product_parameters__parameter').distinct()
+        
+        return queryset
+    
