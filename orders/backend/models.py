@@ -80,7 +80,7 @@ class User(AbstractUser):
                             max_length=10,
                             default='buyer')
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['username']
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -209,6 +209,7 @@ class ProductInfo(models.Model):
     quantity = models.PositiveIntegerField(verbose_name='Количество')
     price = models.PositiveIntegerField(verbose_name='Цена')
     price_rrc = models.PositiveIntegerField(verbose_name='Рекомендуемая розничная цена')
+    external_id = models.PositiveIntegerField(verbose_name='Внешний ID')
     product = models.ForeignKey(Product, verbose_name='Продукт',
                                 related_name='product_infos',
                                 blank=True,

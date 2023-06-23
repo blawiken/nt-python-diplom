@@ -2,14 +2,13 @@ from django.db.models import Q, Sum, F
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
-
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
-
+from yaml import safe_load
 
 from .models import *
 from .serializers import *
@@ -24,6 +23,7 @@ __all__ = [
     'ContactView',
     'CategoryView',
     'ShopView',
+    'PartnerUpdate',
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
@@ -93,7 +93,7 @@ class AccountDetails(APIView):
             try:
                 validate_password(request.data['password'])
             except Exception as error:
-                return Response({'Error': error})
+                return Response({'Error': list(error)})
             else:
                 request.user.set_password(request.data['password'])
         
@@ -162,9 +162,58 @@ class CategoryView(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     ordering = ('name',)
+    http_method_names = ('get',)
 
 
 class ShopView(ModelViewSet):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
     ordering = ('name',)
+    http_method_names = ('get',)
+
+
+class PartnerUpdate(ModelViewSet):
+    queryset = Shop.objects.none()
+    serializer_class = ShopSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        if request.user.type != 'shop':
+            return Response({'Error': 'Only for shops'})
+
+        file = request.data.get('file_name')
+        if file:
+            try:
+                data = safe_load(file)
+            except Exception as error:
+                return Response({'Error': str(error)})
+
+            shop, _ = Shop.objects.get_or_create(user_id=request.user.id,
+                                                 defaults={'name': data['shop']})
+
+            for category in data['categories']:
+                new_cat, __ = Category.objects.get_or_create(id=category['id'], name=category['name'])
+                new_cat.shops.add(shop.id)
+                new_cat.save()
+
+            ProductInfo.objects.filter(shop_id=shop.id).all().delete()
+            for item in data['goods']:
+                product, _ = Product.objects.get_or_create(name=item['name'],
+                                                           category_id=item['category'])
+                
+                product_info = ProductInfo.objects.create(product_id=product.id,
+                                                          external_id=item['id'],
+                                                          model=item['model'],
+                                                          price=item['price'],
+                                                          price_rrc=item['price_rrc'],
+                                                          quantity=item['quantity'],
+                                                          shop_id=shop.id)
+                
+                for name, value in item['parameters'].items():
+                        parameter_object, _ = Parameter.objects.get_or_create(name=name)
+                        ProductParameter.objects.create(product_info_id=product_info.id,
+                                                        parameter_id=parameter_object.id,
+                                                        value=value)
+            return Response(data)
+        return Response({'Error': 'Invalid file'})
+        
