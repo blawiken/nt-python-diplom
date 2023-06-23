@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django_rest_passwordreset',
     'drf_spectacular',
     'drf_spectacular_sidecar',
+    'silk',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'orders.urls'

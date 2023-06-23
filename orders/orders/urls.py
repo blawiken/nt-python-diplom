@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('backend.urls')),
     path('', include('rest_framework.urls', namespace='rest_framework')),
+    path('silk/', include('silk.urls', namespace='silk')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
