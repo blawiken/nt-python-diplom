@@ -13,7 +13,7 @@ from rest_framework.authtoken.models import Token
 
 from distutils.util import strtobool
 from yaml import safe_load
-from ujson import loads
+from ujson import loads, dumps
 
 from .models import *
 from .serializers import *
@@ -21,6 +21,7 @@ from .signals import *
 
 
 __all__ = [
+    'MainPage',
     'RegisterAccount',
     'ConfirmAccount',
     'LoginAccount',
@@ -37,6 +38,30 @@ __all__ = [
 ]
 
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
+
+class MainPage(APIView):
+    def get(self, request):
+        data = {
+            'user-register': 'http://127.0.0.1:8000/api/user/register/',
+            'user-register-confirm': 'http://127.0.0.1:8000/api/user/register/confirm/',
+            'user-login': 'http://127.0.0.1:8000/api/user/login/',
+            'user-details': 'http://127.0.0.1:8000/api/user/details/',
+            'user-contacts': 'http://127.0.0.1:8000/api/user/contacts/',
+            'user-password-reset': 'http://127.0.0.1:8000/api/user/password_reset/',
+            'user-password-reset-confirm': 'http://127.0.0.1:8000/api/user/password_reset/confirm',
+            'basket': 'http://127.0.0.1:8000/api/basket/',
+            'orders': 'http://127.0.0.1:8000/api/orders/',
+            'categories': 'http://127.0.0.1:8000/api/categories/',
+            'products': 'http://127.0.0.1:8000/api/products/',
+            'shops': 'http://127.0.0.1:8000/api/shops/',
+            'shop-update-price': 'http://127.0.0.1:8000/api/shop/update/',
+            'shop-state': 'http://127.0.0.1:8000/api/shop/state/',
+            'shop-orders': 'http://127.0.0.1:8000/api/shop/orders/',
+            'api-swagger': 'http://127.0.0.1:8000/api/swagger/',
+            'api-redoc': 'http://127.0.0.1:8000/api/redoc/',
+        }
+        return Response(data)
+
 
 class RegisterAccount(APIView):
     def post(self, request):
