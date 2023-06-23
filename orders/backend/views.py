@@ -4,11 +4,13 @@ from django.db.models.query import Prefetch
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
+from rest_framework import fields
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+from drf_spectacular.utils import extend_schema_view, extend_schema, inline_serializer
 
 from distutils.util import strtobool
 from yaml import safe_load
@@ -39,6 +41,9 @@ __all__ = [
 MSG_NO_REQUIRED_FIELDS = 'No required fields'
 
 class MainPage(APIView):
+    '''
+    Навигация 
+    '''
     def get(self, request):
         data = {
             'user-register': 'http://127.0.0.1:8000/api/user/register/',
@@ -63,7 +68,12 @@ class MainPage(APIView):
 
 
 class RegisterAccount(APIView):
+    '''
+    Регистрация пользователя
+    '''
+    @extend_schema(request=UserSerializer)
     def post(self, request):
+        '''post method registration'''
         if not {'email', 'password', 'username'}.issubset(request.data):
             return Response({'Error': MSG_NO_REQUIRED_FIELDS})
         
@@ -86,6 +96,13 @@ class RegisterAccount(APIView):
 
 
 class ConfirmAccount(APIView):
+    '''
+    Подтверждение почты
+    '''
+    @extend_schema(request=inline_serializer('user-confirm',{
+        'email': fields.EmailField(),
+        'token': fields.CharField(),
+    }))
     def post(self, request):
         if not {'email', 'token'}.issubset(request.data):
             return Response({'Error': MSG_NO_REQUIRED_FIELDS})
@@ -102,6 +119,13 @@ class ConfirmAccount(APIView):
 
 
 class LoginAccount(APIView):
+    '''
+    Авторизация пользователя
+    '''
+    @extend_schema(request=inline_serializer('user-login',{
+        'email': fields.EmailField(),
+        'password': fields.CharField(),
+    }))
     def post(self, request):
         if not {'email', 'password'}.issubset(request.data):
             return Response({'Error': MSG_NO_REQUIRED_FIELDS})
@@ -116,12 +140,16 @@ class LoginAccount(APIView):
     
 
 class AccountDetails(APIView):
+    '''
+    Информация о пользователе
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
     
+    @extend_schema(request=UserSerializer)
     def post(self, request):
         if 'password' in request.data:
             try:
@@ -140,13 +168,18 @@ class AccountDetails(APIView):
 
 
 class Contact(APIView):
+    '''
+    Контакты пользователя
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = ContactSerializer(request.user.contacts.all(), many=True)
         return Response(serializer.data)
 
+    @extend_schema(request=ContactSerializer)
     def post(self, request):
+        '''get contacts'''
         if not {'city', 'phone'}.issubset(request.data):
             return Response({'Error': MSG_NO_REQUIRED_FIELDS})
         
@@ -161,6 +194,7 @@ class Contact(APIView):
         return Response({'Error': serializer.errors})
     
     def delete(self, request):
+        '''remove contacts'''
         items_sting = request.data.get('items')
         if items_sting:
             items_list = items_sting.split(',')
@@ -177,6 +211,7 @@ class Contact(APIView):
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
 
     def put(self, request):
+        '''edit contacts'''
         if 'id' in request.data:
             if request.data['id'].isdigit():
                 contact = Contact.objects.filter(id=request.data['id'],
@@ -193,6 +228,9 @@ class Contact(APIView):
 
 
 class CategoryView(ModelViewSet):
+    '''
+    Список категорий
+    '''
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     ordering = ('name',)
@@ -200,6 +238,9 @@ class CategoryView(ModelViewSet):
 
 
 class ShopView(ModelViewSet):
+    '''
+    Список магазинов
+    '''
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
     ordering = ('name',)
@@ -207,6 +248,9 @@ class ShopView(ModelViewSet):
 
 
 class PartnerUpdateView(ModelViewSet):
+    '''
+    Обновление прайса магазина
+    '''
     queryset = Shop.objects.none()
     serializer_class = ShopSerializer
     permission_classes = [IsAuthenticated]
@@ -253,15 +297,23 @@ class PartnerUpdateView(ModelViewSet):
 
 
 class PartnerState(APIView):
+    '''
+    Изменение состояния магазина
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        '''get state'''
         if request.user.type != 'shop':
             return Response({'Error': 'Only for shops'})
         
         return Response(ShopSerializer(request.user.shop).data)
     
+    @extend_schema(request=inline_serializer('shop-state',{
+        'state': fields.CharField(),
+    }))
     def post(self, request):
+        '''edit state'''
         if request.user.type != 'shop':
             return Response({'Error': 'Only for shops'})
         
@@ -279,6 +331,9 @@ class PartnerState(APIView):
     
 
 class PartnerOrders(APIView):
+    ''''
+    Заказы магазина
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -297,6 +352,9 @@ class PartnerOrders(APIView):
 
 
 class ProductInfoView(ReadOnlyModelViewSet):
+    '''
+    Поиск товаров
+    '''
     serializer_class = ProductInfoSerializer
 
     def get_queryset(self):
@@ -318,9 +376,13 @@ class ProductInfoView(ReadOnlyModelViewSet):
     
 
 class Basket(APIView):
+    '''
+    Корзина
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        '''get basket'''
         basket = Order.objects.filter(
             user_id=request.user.id, status='basket').prefetch_related(
             'ordered_items__product_info__product__category',
@@ -330,7 +392,11 @@ class Basket(APIView):
         serializer = OrderSerializer(basket, many=True)
         return Response(serializer.data)
     
+    @extend_schema(request=inline_serializer('basket-post',{
+        'items': fields.ListField(),
+    }))
     def post(self, request):
+        '''add in basket'''
         items_sting = request.data.get('items')
         if items_sting:
             try:
@@ -357,6 +423,7 @@ class Basket(APIView):
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
 
     def delete(self, request):
+        '''remove from basket'''
         items_sting = request.data.get('items')
         if items_sting:
             items_list = items_sting.split(',')
@@ -376,6 +443,7 @@ class Basket(APIView):
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
     
     def put(self, request):
+        '''edit item in basket'''
         items_sting = request.data.get('items')
         if items_sting:
             try:
@@ -395,9 +463,13 @@ class Basket(APIView):
 
 
 class Orders(APIView):
+    '''
+    Заказ
+    '''
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        '''get order status'''
         order = Order.objects.filter(
             user_id=request.user.id).exclude(status='basket').select_related(
             'contact').prefetch_related('ordered_items').annotate(
@@ -406,7 +478,12 @@ class Orders(APIView):
         seriazlier = OrderSerializer(order, many=True)
         return Response(seriazlier.data)
     
+    @extend_schema(request=inline_serializer('basket-post',{
+        'id': fields.CharField(),
+        'contact': fields.CharField(),
+    }))
     def post(self, request):
+        '''change order status'''
         if request.data['id'].isdigit():
             try:
                 is_updated = Order.objects.filter(
