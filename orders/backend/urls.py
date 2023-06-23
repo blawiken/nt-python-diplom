@@ -21,6 +21,7 @@ urlpatterns = [
     path('user/password_reset/confirm', reset_password_confirm, name='password-reset-confirm'),
     
     path('basket/', Basket.as_view(), name='basket'),
+    path('orders/', Orders.as_view(), name='orders'),
 
     path('shop/state/', PartnerState.as_view(), name='shop-state'),
 

@@ -30,6 +30,7 @@ __all__ = [
     'PartnerState',
     'ProductInfoView',
     'Basket',
+    'Orders',
 
 ]
 
@@ -347,3 +348,37 @@ class Basket(APIView):
                             order_id=basket.id, id=order_item['id']).update(quantity=order_item['quantity'])
                 return Response({'Objects updated:': object_updated})
         return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+
+
+class Orders(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        order = Order.objects.filter(
+            user_id=request.user.id).exclude(status='basket').select_related(
+            'contact').prefetch_related('ordered_items').annotate(
+            total_quantity=Sum('ordered_items__quantity'),
+            total_sum=Sum('ordered_items__total_amount')).distinct()
+        seriazlier = OrderSerializer(order, many=True)
+        return Response(seriazlier.data)
+    
+    def post(self, request):
+        if request.data['id'].isdigit():
+            try:
+                is_updated = Order.objects.filter(
+                    id=request.data['id'], user_id=request.user.id).update(
+                    contact_id=request.data['contact'], status='new')
+            except:
+                return Response({'Error': 'Invalid format request'})
+            else:
+
+                if is_updated:
+                    send_email(
+                        'Update order status',
+                        'Order is formed',
+                        request.user.email
+                    )
+                    return Response({'OK': True})
+
+        return Response({'Error': MSG_NO_REQUIRED_FIELDS})
+    
