@@ -10,7 +10,8 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
-from drf_spectacular.utils import extend_schema_view, extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework.throttling import AnonRateThrottle
 
 from distutils.util import strtobool
 from yaml import safe_load
@@ -44,6 +45,8 @@ class MainPage(APIView):
     '''
     Навигация 
     '''
+    throttle_classes = [AnonRateThrottle]
+
     def get(self, request):
         data = {
             'user-register': 'http://127.0.0.1:8000/api/user/register/',
